@@ -1,0 +1,232 @@
+---
+title: "Assignment 4"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(gapminder)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+
+```
+
+
+***Task 1 - Activity 2***
+
+For this task I will choose four countries and make a tibble with one row per year and columns for life expectancy. The data set I will use is $\texttt{gapminder}$, and the four countries I will look further into are $\texttt{Norway}$, $\texttt{Canada}$, $\texttt{Zimbabwe}$ and $\texttt{Iran}$.
+
+First: Prepare the data set:
+```{r}
+
+library(gapminder)
+
+
+lexp = gapminder %>% 
+  filter(country %in% c('Norway', 'Canada', 'Iran', 'Zimbabwe')) %>% 
+           select(country, year, lifeExp)
+         
+
+
+```
+
+When the data set is prepared, the table can be made by first reshaping the data so that the correct data is displayed where it is supposed to:
+
+```{r}
+
+lexp_spread = lexp %>% 
+  spread(country, lifeExp)
+```
+
+Now we can create the table:
+
+```{r}
+lexp_spread %>% 
+  knitr::kable()
+```
+
+This data can be used to generate a scatterplot of the life expectancy of $\texttt{Iran}$ versus the one of $\texttt{Norway}$: 
+
+```{r}
+lexp_spread %>% 
+  ggplot(aes(Iran, Norway)) + 
+  geom_point() + 
+  stat_smooth(method = 'gam', formula = y ~poly(x,2), se = FALSE)
+```
+There is also added a second degree ploynomial line to indicate the trend of the points.
+It is interesting to see that Iran has increased its life expectancy in a much higher rate than Norway has over the same time span. 
+
+***Task 2 - Activity #1***
+
+
+Parts of the $\texttt{gapminder}$ data set could be linked to some other data set, for instance we could look further into the countries and their respective life- cycle savings hypothesis using the built-in data set $\texttt{LifeCycleSavings}$.
+
+```{r}
+
+df = LifeCycleSavings
+
+#Excerpt of the data set
+knitr::kable(head(df,10))
+  
+```
+
+Let us look further into the percent of the per-capita disposable income (dpi) and the percentage of growth rate of dpi (ddpi).
+```{r}
+
+
+new_df = LifeCycleSavings %>% 
+  select(dpi, ddpi) %>% 
+  rownames_to_column("country")
+
+head(new_df,10)
+```
+
+Let us now join the two datasets using both $\texttt{right_join}$ and $\texttt{left_join}$.
+The two sets are of different dimensions, with gapminder having 4 columns and 142 rows whilst our new data set $\texttt{new_df}$ has 3 columns and 50 rows.
+
+*Right_join:*
+```{r}
+
+rightj_ex =gapminder %>% 
+  select(country, continent, year, gdpPercap) %>% 
+  
+  right_join(new_df,by=c("country"))
+
+#filter by fixed year and display
+
+rightj_ex %>% 
+  filter(year == 1977) %>% 
+  knitr::kable()
+```
+
+Let us try the same using $\texttt{left_join}$:
+
+*Left_join:*
+```{r}
+leftj_ex =gapminder %>% 
+  select(country, continent, year, gdpPercap) %>% 
+  
+  left_join(new_df,by=c("country"))
+
+#filter by fixed year and display
+
+leftj_ex %>% 
+  filter(year == 1977) %>% 
+  knitr::kable()
+```
+
+We observe that left_join and right_join returns some rows with missing values. This is because the respective functions returns all the rows from one of the data sets so that in this case, right_join would return 50 rows fitted to the $\texttt{new_df}$ and left_join fits the $\texttt{gapminder}$ set: right_join(x,y) would for instance return all rows from y, and the opposite would happen with left_join(x,y). This results in the displayed data loss.
+
+If we want all rows to be displayed, we could use $\texttt{full_join}$:
+```{r}
+fullj_ex =gapminder %>% 
+  select(country, continent, year, gdpPercap) %>% 
+  
+  full_join(new_df,by=c("country"))
+
+#filter by fixed year and display
+
+
+fullj_ex %>% 
+  filter(year == 1977) %>% 
+  knitr::kable()
+
+nrow(fullj_ex)
+
+
+```
+
+If we want to only display the number of rows that the two data sets have in common, we could use $\texttt{inner_join}$: 
+
+```{r}
+
+
+innerj_ex =gapminder %>% 
+  select(country, continent, year, gdpPercap) %>% 
+  
+  inner_join(new_df,by=c("country"))
+
+#filter by fixed year and display
+
+
+innerj_ex %>% 
+  filter(year == 1977) %>% 
+  knitr::kable()
+
+nrow(innerj_ex)
+```
+
+An option for only displaying the data from one of the sets that would match the other completely, we could use $\texttt{semi_join(x,y)}$. This will keep just the columns from x. The difference between semi join and inner join is that semi join never will return duplicate rows of x:
+
+```{r}
+semij_ex =gapminder %>% 
+  select(country, continent, year, gdpPercap) %>% 
+  
+  semi_join(new_df,by=c("country"))
+
+#filter by fixed year and display
+
+
+semij_ex %>% 
+  filter(year == 1977) %>% 
+  knitr::kable()
+
+nrow(semij_ex)
+
+semij_ex_switch =new_df %>% 
+  select(country, dpi,ddpi) %>% 
+  
+  semi_join(gapminder, by ='country')
+
+semij_ex_switch %>% 
+  knitr::kable()
+
+
+
+nrow(semij_ex_switch)
+
+```
+
+If we would like to display all rows of one of the data sets that does not match the rows from the other set, we could use $\texttt{anti_join(x,y)}$, returning the rows of x that are not present in y:
+
+```{r}
+antij_ex = gapminder %>% 
+  select(country, continent, year, gdpPercap) %>% 
+  
+  anti_join(new_df,by=c("country"))
+
+#filter by fixed year and display
+
+
+antij_ex %>% 
+  filter(year == 1977) %>% 
+  knitr::kable()
+
+nrow(antij_ex)
+
+
+
+antij_ex_switch =new_df %>% 
+  select(country, dpi,ddpi) %>% 
+  
+  anti_join(gapminder, by ='country')
+
+antij_ex_switch %>% 
+  knitr::kable()
+
+
+
+nrow(antij_ex_switch)
+
+
+```
+
+The two last functions are called filtering joins, since they keep cases from the left-hand data set, excluding rows from right-hand data set in different ways. 
+
+***Conclusion***
+
+We have looked further into both reshaping a data set, using different techniques in order to display the desired information, as well as joining two data sets with the help of different functions.
